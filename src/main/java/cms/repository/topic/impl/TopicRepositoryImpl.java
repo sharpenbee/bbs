@@ -27,6 +27,7 @@ import cms.repository.message.RemindRepository;
 import cms.repository.redEnvelope.RedEnvelopeRepository;
 import cms.repository.topic.TopicRepository;
 import cms.repository.user.UserRepository;
+import cms.repository.vote.VoteRepository;
 import jakarta.annotation.Resource;
 import jakarta.persistence.Query;
 import org.apache.logging.log4j.LogManager;
@@ -53,6 +54,7 @@ public class TopicRepositoryImpl extends DaoSupport<Topic> implements TopicRepos
 	@Resource TopicUnhideConfig topicUnhideConfig;
 	@Resource UserRepository userRepository;
 	@Resource RedEnvelopeRepository redEnvelopeRepository;
+	@Resource VoteRepository voteRepository;
 	
 	/**
 	 * 根据Id查询话题
@@ -359,6 +361,16 @@ public class TopicRepositoryImpl extends DaoSupport<Topic> implements TopicRepos
 			redEnvelopeRepository.saveGiveRedEnvelope(giveRedEnvelope, userName, amount, paymentLog);
 		}
 
+		if(voteTheme != null){
+			voteTheme.setSourceParameterId(String.valueOf(topic.getId()));
+			List<VoteOption> voteOptionList = voteTheme.getVoteOptionList();
+			if(voteOptionList != null && !voteOptionList.isEmpty()){
+				for(VoteOption option : voteOptionList){
+					option.setSourceParameterId(String.valueOf(topic.getId()));
+				}
+			}
+			voteRepository.saveVoteTheme(voteTheme, voteOptionList);
+		}
 	}
 	/**
 	 * 修改话题

@@ -60,6 +60,7 @@ import cms.repository.topic.TopicRepository;
 import cms.repository.user.UserGradeRepository;
 import cms.repository.user.UserRepository;
 import cms.service.frontend.TopicClientService;
+import cms.service.vote.VoteService;
 import cms.utils.*;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
@@ -157,6 +158,8 @@ public class TopicClientServiceImpl implements TopicClientService {
     @Resource
     ThumbnailRepository thumbnailRepository;
     @Resource FollowCacheManager followCacheManager;
+    @Resource
+    VoteService voteService;
 
 
     //Html过滤结果
@@ -1802,7 +1805,64 @@ public class TopicClientServiceImpl implements TopicClientService {
             }
         }
 
+        if(topicDTO.getIsVote() != null && topicDTO.getIsVote()){
+            Integer topicMaxVoteOptions = systemSetting.getTopicMaxVoteOptions();
+            if(topicMaxVoteOptions != null && topicMaxVoteOptions == 0){
+                errors.put("vote", "系统不允许发起投票");
+            }else{
+                if(topicDTO.getVoteTitle() == null || topicDTO.getVoteTitle().trim().isEmpty()){
+                    errors.put("voteTitle", "投票标题不能为空");
+                }else if(topicDTO.getVoteTitle().length() > 190){
+                    errors.put("voteTitle", "投票标题不能大于190个字符");
+                }
 
+                String[] voteOptionTextList = topicDTO.getVoteOptionTextList();
+                if(voteOptionTextList == null || voteOptionTextList.length < 2){
+                    errors.put("voteOption", "投票选项至少需要2个");
+                }else{
+                    int maxOptions = 10;
+                    if(topicMaxVoteOptions != null && topicMaxVoteOptions > 0){
+                        maxOptions = topicMaxVoteOptions;
+                    }
+                    if(voteOptionTextList.length > maxOptions){
+                        errors.put("voteOption", "投票选项最多只能有" + maxOptions + "个");
+                    }else{
+                        for(String optionText : voteOptionTextList){
+                            if(optionText == null || optionText.trim().isEmpty()){
+                                errors.put("voteOption", "投票选项内容不能为空");
+                                break;
+                            }else if(optionText.length() > 60){
+                                errors.put("voteOption", "投票选项内容不能大于60个字符");
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if(topicDTO.getVoteMaxChoice() == null || topicDTO.getVoteMaxChoice() < 1){
+                    errors.put("voteMaxChoice", "投票最大可选数不能小于1");
+                }else{
+                    String[] options = topicDTO.getVoteOptionTextList();
+                    if(options != null && topicDTO.getVoteMaxChoice() > options.length){
+                        errors.put("voteMaxChoice", "投票最大可选数不能大于选项数量");
+                    }
+                }
+
+                if(topicDTO.getVoteEndDate() == null || topicDTO.getVoteEndDate().trim().isEmpty()){
+                    errors.put("voteEndDate", "投票截止时间不能为空");
+                }else{
+                    try{
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                        voteEndDate = LocalDateTime.parse(topicDTO.getVoteEndDate(), formatter);
+                        if(voteEndDate.isBefore(currentTime)){
+                            errors.put("voteEndDate", "投票截止时间不能早于当前时间");
+                        }
+                    }catch(Exception e){
+                        errors.put("voteEndDate", "投票截止时间格式不正确，请使用yyyy-MM-dd HH:mm:ss格式");
+                    }
+                }
+            }
+        }
 
         EditorTag editorTag = settingComponent.readTopicEditorTag();
         List<UserGrade> userGradeList = userGradeRepository.findAllGrade_cache();
@@ -2011,6 +2071,35 @@ public class TopicClientServiceImpl implements TopicClientService {
                 topic.setGiveRedEnvelopeId(giveRedEnvelope.getId());//发红包Id
             }
 
+            if(topicDTO.getIsVote() != null && topicDTO.getIsVote()){
+                voteTheme = new VoteTheme();
+                voteTheme.setId(UUIDUtil.getUUID32());
+                voteTheme.setTitle(topicDTO.getVoteTitle());
+                voteTheme.setModule(10);
+                voteTheme.setCreateDate(currentTime);
+                voteTheme.setEndDate(voteEndDate);
+                voteTheme.setUserName(accessUser.getUserName());
+                voteTheme.setIsStaff(false);
+                voteTheme.setMaxChoice(topicDTO.getVoteMaxChoice());
+
+                List<VoteOption> voteOptionList = new ArrayList<>();
+                String[] optionTextList = topicDTO.getVoteOptionTextList();
+                if(optionTextList != null && optionTextList.length > 0){
+                    for(int i = 0; i < optionTextList.length; i++){
+                        VoteOption voteOption = new VoteOption();
+                        voteOption.setId(UUIDUtil.getUUID32());
+                        voteOption.setText(optionTextList[i].trim());
+                        voteOption.setVoteThemeId(voteTheme.getId());
+                        voteOption.setSort(i + 1);
+                        voteOption.setUserName(accessUser.getUserName());
+                        voteOption.setModule(10);
+                        voteOptionList.add(voteOption);
+                    }
+                }
+                voteTheme.setVoteOptionList(voteOptionList);
+
+                topic.setVoteThemeId(voteTheme.getId());
+            }
 
             //保存话题
             topicRepository.saveTopic(topic,giveRedEnvelope, user.getUserName(), redEnvelope_totalAmount, giveRedEnvelope_paymentLog,voteTheme);
