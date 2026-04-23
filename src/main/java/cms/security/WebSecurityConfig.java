@@ -100,6 +100,8 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                                 // 确保由 StreamingResponseBody 触发的 ASYNC 调度跳过第二次授权检查。
                                 .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
+                                //投票详情和结果接口允许匿名访问
+                                .requestMatchers("/control/vote/detail", "/control/vote/result").permitAll()
                                 //配置受保护的资源
                                 .requestMatchers("/control/**").access(customAuthorizationManager)
                                 .requestMatchers(PathPatternRequestMatcher.withDefaults().matcher("/admin/logout")).authenticated()// // 管理员退出接口
