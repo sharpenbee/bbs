@@ -1744,7 +1744,6 @@ public class TopicClientServiceImpl implements TopicClientService {
         List<ImageInfo> imageList = new ArrayList<ImageInfo>();
         Topic topic = new Topic();
         VoteTheme voteTheme = null;
-        List<String> optionTextList = new ArrayList<String>();
         LocalDateTime voteEndDate = null;
         LocalDateTime currentTime = LocalDateTime.now();//当前时间
 
