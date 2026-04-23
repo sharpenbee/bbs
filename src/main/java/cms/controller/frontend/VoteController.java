@@ -65,17 +65,32 @@ public class VoteController {
         voteTheme.setVoteOptionList(optionList);
         voteTheme.setStatus(voteService.getVoteStatus(voteTheme));
 
+        Map<String, Object> voteResult = voteService.getVoteResult(voteThemeId);
+        returnValue.put("voteResult", voteResult);
+
+        if (voteResult != null && optionList != null) {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> optionResults = (List<Map<String, Object>>) voteResult.get("optionResults");
+            if (optionResults != null) {
+                Map<String, Long> voteCountMap = new HashMap<>();
+                for (Map<String, Object> optionResult : optionResults) {
+                    String optionId = (String) optionResult.get("id");
+                    Long count = ((Number) optionResult.get("count")).longValue();
+                    voteCountMap.put(optionId, count);
+                }
+                for (VoteOption option : optionList) {
+                    Long count = voteCountMap.getOrDefault(option.getId(), 0L);
+                    option.setTotalVotes(count);
+                }
+            }
+        }
+
         returnValue.put("voteTheme", voteTheme);
 
         AccessUser accessUser = AccessUserThreadLocal.get();
         if (accessUser != null) {
             boolean hasVoted = voteService.hasUserVoted(accessUser.getUserName(), voteThemeId);
             returnValue.put("hasVoted", hasVoted);
-
-            if (hasVoted) {
-                Map<String, Object> voteResult = voteService.getVoteResult(voteThemeId);
-                returnValue.put("voteResult", voteResult);
-            }
         } else {
             returnValue.put("hasVoted", false);
         }
