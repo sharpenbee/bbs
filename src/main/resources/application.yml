@@ -52,7 +52,7 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/bbs-jdk21?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&zeroDateTimeBehavior=CONVERT_TO_NULL&allowPublicKeyRetrieval=true&useSSL=false&rewriteBatchedStatements=true
     username: root
     #加密由ENC()包裹
-    password: ENC(H8RxvgIzAJRfwLV10qFukA==)
+    password: 1234
     driver-class-name: com.mysql.cj.jdbc.Driver
     #hikari数据库连接池
     hikari:
