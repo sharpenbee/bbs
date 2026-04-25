@@ -242,13 +242,32 @@ public class ReportServiceImpl implements ReportService {
             List<ReportType> reportTypeList = reportTypeRepository.findAllReportType();
             if(reportTypeList != null && reportTypeList.size() >0){
                 for(Report report : qr.getResultlist()){
+                    // 处理单个举报类型
                     for(ReportType reportType : reportTypeList){
-                        if(report.getReportTypeId().equals(reportType.getId())){
+                        if(report.getReportTypeId() != null && report.getReportTypeId().equals(reportType.getId())){
                             report.setReportTypeName(reportType.getName());
                             break;
                         }
                     }
-
+                    
+                    // 处理多个举报类型（如果有）
+                    if(report.getReportTypeIds() != null && !report.getReportTypeIds().trim().isEmpty()){
+                        List<String> typeNames = new ArrayList<>();
+                        String[] typeIds = report.getReportTypeIds().split(",");
+                        for(String typeId : typeIds){
+                            if(typeId != null && !typeId.trim().isEmpty()){
+                                for(ReportType reportType : reportTypeList){
+                                    if(typeId.trim().equals(reportType.getId())){
+                                        typeNames.add(reportType.getName());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if(typeNames.size() > 0){
+                            report.setReportTypeNames(String.join(",", typeNames));
+                        }
+                    }
                 }
             }
 
@@ -345,13 +364,32 @@ public class ReportServiceImpl implements ReportService {
             List<ReportType> reportTypeList = reportTypeRepository.findAllReportType();
             if(reportTypeList != null && reportTypeList.size() >0){
                 for(Report report : qr.getResultlist()){
+                    // 处理单个举报类型
                     for(ReportType reportType : reportTypeList){
-                        if(report.getReportTypeId().equals(reportType.getId())){
+                        if(report.getReportTypeId() != null && report.getReportTypeId().equals(reportType.getId())){
                             report.setReportTypeName(reportType.getName());
                             break;
                         }
                     }
-
+                    
+                    // 处理多个举报类型（如果有）
+                    if(report.getReportTypeIds() != null && !report.getReportTypeIds().trim().isEmpty()){
+                        List<String> typeNames = new ArrayList<>();
+                        String[] typeIds = report.getReportTypeIds().split(",");
+                        for(String typeId : typeIds){
+                            if(typeId != null && !typeId.trim().isEmpty()){
+                                for(ReportType reportType : reportTypeList){
+                                    if(typeId.trim().equals(reportType.getId())){
+                                        typeNames.add(reportType.getName());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if(typeNames.size() > 0){
+                            report.setReportTypeNames(String.join(",", typeNames));
+                        }
+                    }
                 }
             }
 
@@ -436,13 +474,32 @@ public class ReportServiceImpl implements ReportService {
             List<ReportType> reportTypeList = reportTypeRepository.findAllReportType();
             if(reportTypeList != null && reportTypeList.size() >0){
                 for(Report report : qr.getResultlist()){
+                    // 处理单个举报类型
                     for(ReportType reportType : reportTypeList){
-                        if(report.getReportTypeId().equals(reportType.getId())){
+                        if(report.getReportTypeId() != null && report.getReportTypeId().equals(reportType.getId())){
                             report.setReportTypeName(reportType.getName());
                             break;
                         }
                     }
-
+                    
+                    // 处理多个举报类型（如果有）
+                    if(report.getReportTypeIds() != null && !report.getReportTypeIds().trim().isEmpty()){
+                        List<String> typeNames = new ArrayList<>();
+                        String[] typeIds = report.getReportTypeIds().split(",");
+                        for(String typeId : typeIds){
+                            if(typeId != null && !typeId.trim().isEmpty()){
+                                for(ReportType reportType : reportTypeList){
+                                    if(typeId.trim().equals(reportType.getId())){
+                                        typeNames.add(reportType.getName());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if(typeNames.size() > 0){
+                            report.setReportTypeNames(String.join(",", typeNames));
+                        }
+                    }
                 }
             }
 
@@ -569,7 +626,7 @@ public class ReportServiceImpl implements ReportService {
             contentBuilder.append("（").append(report.getReportTypeNames()).append("）");
         }
         
-        contentBuilder.append("已").append(statusText);
+        contentBuilder.append(statusText);
         
         if(processResult != null && !processResult.trim().isEmpty()){
             contentBuilder.append("，处理结果：").append(processResult);
@@ -634,9 +691,33 @@ public class ReportServiceImpl implements ReportService {
             throw new BusinessException(Map.of("reportId", "举报不存在"));
         }
         Map<String,Object> returnValue = new HashMap<String,Object>();
+        
+        // 处理单个举报类型
         ReportType reportType = reportTypeRepository.findById(report.getReportTypeId());
         if(reportType != null){
             report.setReportTypeName(reportType.getName());
+        }
+        
+        // 处理多个举报类型（如果有）
+        if(report.getReportTypeIds() != null && !report.getReportTypeIds().trim().isEmpty()){
+            List<ReportType> reportTypeList = reportTypeRepository.findAllReportType();
+            if(reportTypeList != null && reportTypeList.size() >0){
+                List<String> typeNames = new ArrayList<>();
+                String[] typeIds = report.getReportTypeIds().split(",");
+                for(String typeId : typeIds){
+                    if(typeId != null && !typeId.trim().isEmpty()){
+                        for(ReportType rt : reportTypeList){
+                            if(typeId.trim().equals(rt.getId())){
+                                typeNames.add(rt.getName());
+                                break;
+                            }
+                        }
+                    }
+                }
+                if(typeNames.size() > 0){
+                    report.setReportTypeNames(String.join(",", typeNames));
+                }
+            }
         }
 
         if(report.getImageData() != null && !report.getImageData().trim().isEmpty()){
