@@ -31,7 +31,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
 
     private AccessUser getCurrentUser() {
         AccessUser accessUser = AccessUserThreadLocal.get();
-        if (accessUser == null || accessUser.getId() == null) {
+        if (accessUser == null || accessUser.getUserId() == null) {
             throw new BusinessException(Map.of("error", "用户未登录"));
         }
         return accessUser;
@@ -41,7 +41,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional
     public Map<String, Object> createGroup(String groupName, String description, List<Long> memberUserIds, String fileServerAddress) {
         AccessUser currentUser = getCurrentUser();
-        Long ownerId = currentUser.getId();
+        Long ownerId = currentUser.getUserId();
         String ownerName = currentUser.getUserName();
 
         if (groupName == null || groupName.trim().isEmpty()) {
@@ -100,7 +100,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Override
     public Map<String, Object> getGroupList(int page, String fileServerAddress) {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
 
         Map<String, Object> returnValue = new HashMap<>();
         PageView<ChatGroup> pageView = new PageView<>(settingRepository.findSystemSetting_cache().getBackstagePageNumber(), page, 20);
@@ -127,7 +127,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Override
     public Map<String, Object> getGroupDetail(String groupId, String fileServerAddress) {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
 
         ChatGroup chatGroup = chatGroupRepository.findById(groupId);
         if (chatGroup == null) {
@@ -159,7 +159,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional
     public void addMembers(String groupId, List<Long> memberUserIds) {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
 
         ChatGroup chatGroup = chatGroupRepository.findById(groupId);
         if (chatGroup == null) {
@@ -208,7 +208,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional
     public void removeMember(String groupId, Long userId) {
         AccessUser currentUser = getCurrentUser();
-        Long operatorId = currentUser.getId();
+        Long operatorId = currentUser.getUserId();
 
         ChatGroup chatGroup = chatGroupRepository.findById(groupId);
         if (chatGroup == null) {
@@ -240,7 +240,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional
     public ChatGroupMessage sendMessage(String groupId, String content, String fileServerAddress) {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
         String userName = currentUser.getUserName();
 
         if (content == null || content.trim().isEmpty()) {
@@ -282,7 +282,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Override
     public Map<String, Object> getMessageList(String groupId, int page, String fileServerAddress) {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
 
         ChatGroup chatGroup = chatGroupRepository.findById(groupId);
         if (chatGroup == null) {
@@ -319,7 +319,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional
     public void markMessageAsRead(String messageId) {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
         chatGroupRepository.markMessageAsRead(messageId, userId);
     }
 
@@ -327,28 +327,28 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional
     public void markAllMessagesAsRead(String groupId) {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
         chatGroupRepository.markAllMessagesAsRead(groupId, userId);
     }
 
     @Override
     public Long getUnreadCount(String groupId) {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
         return chatGroupRepository.countUnreadMessages(groupId, userId);
     }
 
     @Override
     public Long getAllUnreadCount() {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
         return chatGroupRepository.countAllUnreadMessages(userId);
     }
 
     @Override
     public Map<String, Object> getMemberList(String groupId, int page, String fileServerAddress) {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
 
         ChatGroup chatGroup = chatGroupRepository.findById(groupId);
         if (chatGroup == null) {
@@ -385,7 +385,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
     @Transactional
     public void dissolveGroup(String groupId) {
         AccessUser currentUser = getCurrentUser();
-        Long userId = currentUser.getId();
+        Long userId = currentUser.getUserId();
 
         ChatGroup chatGroup = chatGroupRepository.findById(groupId);
         if (chatGroup == null) {
@@ -396,7 +396,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
             throw new BusinessException(Map.of("error", "只有群主才能解散群聊"));
         }
 
-        chatGroupRepository.dissolveGroup(groupId);
+        chatGroupRepository.dissolveChatGroup(groupId);
     }
 
     @Override
@@ -438,7 +438,7 @@ public class ChatGroupServiceImpl implements ChatGroupService {
         if (chatGroup == null) {
             throw new BusinessException(Map.of("error", "群聊不存在"));
         }
-        chatGroupRepository.dissolveGroup(groupId);
+        chatGroupRepository.dissolveChatGroup(groupId);
     }
 
     @Override
