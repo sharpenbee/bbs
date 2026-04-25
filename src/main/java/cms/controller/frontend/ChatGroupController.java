@@ -58,7 +58,7 @@ public class ChatGroupController {
         String fileServerAddress = fileComponent.fileServerAddress(request);
         List<Long> memberIds = parseUserIds(memberUserIds);
         Map<String, Object> result = chatGroupService.createGroup(groupName, description, memberIds, fileServerAddress);
-        return ClientRequestResult.success(result);
+        return ClientRequestResult.success().addAll(result);
     }
 
     @RoleAnnotation(resourceCode=ResourceEnum._9003000)
@@ -76,7 +76,7 @@ public class ChatGroupController {
     public ClientRequestResult sendGroupMessage(String groupId, String content, HttpServletRequest request){
         String fileServerAddress = fileComponent.fileServerAddress(request);
         ChatGroupMessage message = chatGroupService.sendMessage(groupId, content, fileServerAddress);
-        return ClientRequestResult.success(Map.of("message", message));
+        return ClientRequestResult.success().add("message", message);
     }
 
     @DynamicRouteTarget(route = DynamicRouteEnum.DEFAULT_1210700)
