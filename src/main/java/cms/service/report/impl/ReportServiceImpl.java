@@ -4,6 +4,7 @@ package cms.service.report.impl;
 import cms.component.JsonComponent;
 import cms.component.TextFilterComponent;
 import cms.component.fileSystem.FileComponent;
+import cms.component.message.SubscriptionSystemNotifyComponent;
 import cms.component.report.ReportTypeComponent;
 import cms.component.user.UserCacheManager;
 import cms.config.BusinessException;
@@ -11,12 +12,15 @@ import cms.dto.PageView;
 import cms.dto.QueryResult;
 import cms.dto.report.ReportRequest;
 import cms.dto.topic.ImageInfo;
+import cms.model.message.SubscriptionSystemNotify;
+import cms.model.message.SystemNotify;
 import cms.model.question.Question;
 import cms.model.report.Report;
 import cms.model.report.ReportType;
 import cms.model.staff.SysUsers;
 import cms.model.topic.Topic;
 import cms.model.user.User;
+import cms.repository.message.SystemNotifyRepository;
 import cms.repository.question.QuestionRepository;
 import cms.repository.report.ReportRepository;
 import cms.repository.report.ReportTypeRepository;
@@ -25,8 +29,10 @@ import cms.repository.topic.TopicRepository;
 import cms.repository.user.UserRepository;
 import cms.service.report.ReportService;
 import cms.utils.FileUtil;
+import cms.utils.HtmlEscape;
 import cms.utils.IpAddress;
 import cms.utils.UUIDUtil;
+import cms.utils.WebUtil;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
@@ -71,6 +77,10 @@ public class ReportServiceImpl implements ReportService {
     QuestionRepository questionRepository;
     @Resource
     UserRepository userRepository;
+    @Resource
+    SystemNotifyRepository systemNotifyRepository;
+    @Resource
+    SubscriptionSystemNotifyComponent subscriptionSystemNotifyComponent;
 
     //模块参数
     private final List<Integer> statusList = Arrays.asList(40,50);
@@ -113,13 +123,32 @@ public class ReportServiceImpl implements ReportService {
             List<ReportType> reportTypeList = reportTypeRepository.findAllReportType();
             if(reportTypeList != null && reportTypeList.size() >0){
                 for(Report report : qr.getResultlist()){
+                    // 处理单个举报类型
                     for(ReportType reportType : reportTypeList){
-                        if(report.getReportTypeId().equals(reportType.getId())){
+                        if(report.getReportTypeId() != null && report.getReportTypeId().equals(reportType.getId())){
                             report.setReportTypeName(reportType.getName());
                             break;
                         }
                     }
-
+                    
+                    // 处理多个举报类型（如果有）
+                    if(report.getReportTypeIds() != null && !report.getReportTypeIds().trim().isEmpty()){
+                        List<String> typeNames = new ArrayList<>();
+                        String[] typeIds = report.getReportTypeIds().split(",");
+                        for(String typeId : typeIds){
+                            if(typeId != null && !typeId.trim().isEmpty()){
+                                for(ReportType reportType : reportTypeList){
+                                    if(typeId.trim().equals(reportType.getId())){
+                                        typeNames.add(reportType.getName());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if(typeNames.size() > 0){
+                            report.setReportTypeNames(String.join(",", typeNames));
+                        }
+                    }
                 }
             }
 
@@ -507,6 +536,84 @@ public class ReportServiceImpl implements ReportService {
         int i = reportRepository.updateReportInfo(reportRequest.getReportId(), reportRequest.getStatus(), reportRequest.getProcessResult(), reportRequest.getRemark(), LocalDateTime.now(),username, reportRequest.getVersion());
         if(i ==0){
             throw new BusinessException(Map.of("report", "修改失败"));
+        }
+        
+        // 发送系统通知给举报用户
+        this.sendNotificationToReporter(report, reportRequest.getStatus(), reportRequest.getProcessResult());
+    }
+    
+    /**
+     * 发送系统通知给举报用户
+     * @param report 举报信息
+     * @param status 处理状态（40:驳回, 50:已处理）
+     * @param processResult 处理结果说明
+     */
+    public void sendNotificationToReporter(Report report, Integer status, String processResult){
+        if(report == null || report.getUserName() == null){
+            return;
+        }
+        
+        // 获取举报用户信息
+        User user = userCacheManager.query_cache_findUserByUserName(report.getUserName());
+        if(user == null){
+            return;
+        }
+        
+        // 构建通知内容
+        String statusText = status.equals(50) ? "已处理" : "已驳回";
+        StringBuilder contentBuilder = new StringBuilder();
+        contentBuilder.append("您的举报");
+        
+        // 添加举报类型名称
+        if(report.getReportTypeNames() != null && !report.getReportTypeNames().isEmpty()){
+            contentBuilder.append("（").append(report.getReportTypeNames()).append("）");
+        }
+        
+        contentBuilder.append("已").append(statusText);
+        
+        if(processResult != null && !processResult.trim().isEmpty()){
+            contentBuilder.append("，处理结果：").append(processResult);
+        }
+        
+        contentBuilder.append("。");
+        
+        String content = contentBuilder.toString();
+        
+        // 创建系统通知
+        SystemNotify systemNotify = new SystemNotify();
+        String formattedContent = WebUtil.urlToHyperlink(HtmlEscape.escape(content));
+        systemNotify.setContent(formattedContent);
+        systemNotify.setSendTime(LocalDateTime.now());
+        
+        // 获取当前处理员工名称
+        String staffName = "";
+        Object principal  =  SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if(principal instanceof SysUsers){
+            staffName =((SysUsers)principal).getUserAccount();
+        }
+        systemNotify.setStaffName(staffName);
+        
+        // 保存系统通知
+        systemNotifyRepository.saveSystemNotify(systemNotify);
+        
+        // 创建订阅系统通知（关联到举报用户）
+        if(systemNotify.getId() != null){
+            SubscriptionSystemNotify subscriptionSystemNotify = new SubscriptionSystemNotify();
+            // ID 由 18位系统通知Id + 18位用户Id 组成
+            String subscriptionId = String.format("%018d", systemNotify.getId()) + String.format("%018d", user.getId());
+            subscriptionSystemNotify.setId(subscriptionId);
+            subscriptionSystemNotify.setSystemNotifyId(systemNotify.getId());
+            subscriptionSystemNotify.setUserId(user.getId());
+            subscriptionSystemNotify.setStatus(10); // 10:未读
+            subscriptionSystemNotify.setSendTime(LocalDateTime.now());
+            
+            // 创建订阅通知对象（处理分表）
+            Object subscriptionObj = subscriptionSystemNotifyComponent.createSubscriptionSystemNotifyObject(subscriptionSystemNotify);
+            if(subscriptionObj != null){
+                List<Object> subscriptionList = new ArrayList<>();
+                subscriptionList.add(subscriptionObj);
+                systemNotifyRepository.saveSubscriptionSystemNotify(subscriptionList);
+            }
         }
     }
 
