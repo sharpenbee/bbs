@@ -1,0 +1,51 @@
+# 编译输出目录
+target/
+out/
+build/
+
+# IDE配置文件
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# 版本控制
+.git/
+.gitignore
+.gitattributes
+.svn/
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 本地配置
+.env
+.env.local
+*.local.*
+
+# 测试文件
+src/test/
+
+# 文档
+*.md
+*.txt
+*.pdf
+
+# Maven本地仓库（如果有的话）
+.m2/repository/
+
+# 图片和资源文件（如果不需要在构建时使用）
+image/
