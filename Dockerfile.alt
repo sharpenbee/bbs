@@ -1,0 +1,35 @@
+# 备选Dockerfile - 使用更常见的OpenJDK镜像
+# 首先需要在本地执行 mvn clean package -DskipTests 构建jar包
+
+# 选项1: 使用OpenJDK官方镜像
+FROM openjdk:21-jre-slim
+
+# 选项2: 使用Amazon Corretto镜像（AWS提供，兼容性好）
+# FROM amazoncorretto:21-alpine-jre
+
+# 选项3: 使用BellSoft Liberica镜像（轻量级，功能完整）
+# FROM bellsoft/liberica-runtime-container:jre-21-slim-glibc
+
+WORKDIR /app
+
+# 创建非root用户（如果镜像支持）
+# 对于openjdk:21-jre-slim，我们需要手动创建用户
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
+# 复制构建好的jar包
+COPY target/bbs-jdk21-v7.0.jar app.jar
+
+# 更改文件权限
+RUN chown -R appuser:appgroup /app
+
+# 切换到非root用户
+USER appuser
+
+# 暴露端口
+EXPOSE 8080
+
+# JVM参数
+ENV JAVA_OPTS="-Xms256m -Xmx512m"
+
+# 启动命令
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

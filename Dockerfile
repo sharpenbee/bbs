@@ -1,18 +1,5 @@
-FROM eclipse-temurin:21-jdk-alpine AS builder
-
-WORKDIR /app
-
-COPY pom.xml .
-COPY .mvn .mvn
-COPY mvnw .
-COPY mvnw.cmd .
-
-RUN chmod +x mvnw
-
-COPY lib lib
-COPY src src
-
-RUN ./mvnw clean package -DskipTests
+# 使用本地已构建的jar包构建镜像（推荐）
+# 首先需要在本地执行 mvn clean package -DskipTests 构建jar包
 
 FROM eclipse-temurin:21-jre-alpine
 
@@ -20,7 +7,7 @@ WORKDIR /app
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-COPY --from=builder /app/target/bbs-jdk21-v7.0.jar app.jar
+COPY target/bbs-jdk21-v7.0.jar app.jar
 
 RUN chown -R appuser:appgroup /app
 
