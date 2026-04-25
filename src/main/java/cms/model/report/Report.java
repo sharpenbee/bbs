@@ -66,6 +66,17 @@ public class Report implements Serializable{
 	@Transient
 	private String reportTypeName;
 	
+	/** 多个举报分类Id（逗号分隔，最多3个） **/
+	@Column(length=120)
+	private String reportTypeIds;
+	/** 多个举报分类名称（逗号分隔，用于展示） **/
+	@Transient
+	private String reportTypeNames;
+	
+	/** 补充描述 **/
+	@Lob
+	private String additionalDescription;
+	
 	/** 参数Id (话题Id；  评论Id；  评论回复Id；  问题Id；  答案Id；  答案回复Id) **/
 	@Column(length=65)
 	private String parameterId;

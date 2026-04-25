@@ -214,10 +214,39 @@ public class ReportClientServiceImpl implements ReportClientService {
 
 
         String format_reason = "";
-
-        if(reportDTO.getReportTypeId() != null && !reportDTO.getReportTypeId().trim().isEmpty()){
+        String format_additionalDescription = "";
+        
+        // 处理多个举报类型
+        List<String> validTypeIds = new ArrayList<>();
+        if(reportDTO.getReportTypeIds() != null && !reportDTO.getReportTypeIds().trim().isEmpty()){
+            String[] typeIds = reportDTO.getReportTypeIds().split(",");
+            if(typeIds.length > 3){
+                errors.put("reportTypeIds", "最多只能选择3个举报类型");
+            }else{
+                for(String typeId : typeIds){
+                    if(typeId != null && !typeId.trim().isEmpty()){
+                        ReportType reportType = reportTypeRepository.findById(typeId.trim());
+                        if(reportType != null){
+                            validTypeIds.add(typeId.trim());
+                            // 检查是否需要填写理由
+                            if(reportType.getChildNodeNumber() == 0 && reportType.getGiveReason()){
+                                if(reportDTO.getReason() == null || reportDTO.getReason().trim().isEmpty()){
+                                    errors.put("reason", "请填写理由");
+                                }
+                            }
+                        }else{
+                            errors.put("reportTypeIds", "举报分类不存在: " + typeId);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 兼容单个举报类型
+        if(validTypeIds.isEmpty() && reportDTO.getReportTypeId() != null && !reportDTO.getReportTypeId().trim().isEmpty()){
             ReportType reportType = reportTypeRepository.findById(reportDTO.getReportTypeId().trim());
             if(reportType != null){
+                validTypeIds.add(reportDTO.getReportTypeId().trim());
                 if(reportType.getChildNodeNumber() == 0 && reportType.getGiveReason()){
                     if(reportDTO.getReason() != null && !reportDTO.getReason().trim().isEmpty()){
                         format_reason = textFilterComponent.filterText(reportDTO.getReason().trim());
@@ -225,12 +254,23 @@ public class ReportClientServiceImpl implements ReportClientService {
                         errors.put("reason", "请填写理由");
                     }
                 }
-
             }else{
                 errors.put("reportTypeId", "举报分类不存在");
             }
-        }else{
+        }
+        
+        if(validTypeIds.isEmpty()){
             errors.put("reportTypeId", "请选择举报分类");
+        }
+        
+        // 处理理由
+        if(reportDTO.getReason() != null && !reportDTO.getReason().trim().isEmpty()){
+            format_reason = textFilterComponent.filterText(reportDTO.getReason().trim());
+        }
+        
+        // 处理补充描述
+        if(reportDTO.getAdditionalDescription() != null && !reportDTO.getAdditionalDescription().trim().isEmpty()){
+            format_additionalDescription = textFilterComponent.filterText(reportDTO.getAdditionalDescription().trim());
         }
 
 
@@ -296,8 +336,15 @@ public class ReportClientServiceImpl implements ReportClientService {
         report.setUserName(accessUser.getUserName());
 
         report.setModule(reportDTO.getModule());
-        report.setReportTypeId(reportDTO.getReportTypeId());
+        // 设置举报类型（兼容单个和多个）
+        if(validTypeIds.size() > 0){
+            report.setReportTypeId(validTypeIds.get(0)); // 主类型
+            if(validTypeIds.size() > 1){
+                report.setReportTypeIds(String.join(",", validTypeIds)); // 多个类型用逗号分隔
+            }
+        }
         report.setReason(format_reason);
+        report.setAdditionalDescription(format_additionalDescription);
         report.setPostTime(dateTime);
         report.setStatus(10);
         report.setIp(ip);

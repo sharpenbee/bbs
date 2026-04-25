@@ -78,4 +78,12 @@ public interface ReportService {
      * @param reportId 举报Id集合
      */
     public void reductionReport(Long[] reportId);
+    
+    /**
+     * 发送系统通知给举报用户
+     * @param report 举报信息
+     * @param status 处理状态（40:驳回, 50:已处理）
+     * @param processResult 处理结果说明
+     */
+    public void sendNotificationToReporter(Report report, Integer status, String processResult);
 }
