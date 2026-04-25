@@ -49,10 +49,10 @@ spring:
   datasource:
 
     #账号配置
-    url: jdbc:mysql://127.0.0.1:3306/bbs-jdk21?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&zeroDateTimeBehavior=CONVERT_TO_NULL&allowPublicKeyRetrieval=true&useSSL=false&rewriteBatchedStatements=true
-    username: root
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:bbs-jdk21}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&zeroDateTimeBehavior=CONVERT_TO_NULL&allowPublicKeyRetrieval=true&useSSL=false&rewriteBatchedStatements=true
+    username: ${DB_USERNAME:root}
     #加密由ENC()包裹
-    password: ENC(H8RxvgIzAJRfwLV10qFukA==)
+    password: ${DB_PASSWORD:ENC(H8RxvgIzAJRfwLV10qFukA==)}
     driver-class-name: com.mysql.cj.jdbc.Driver
     #hikari数据库连接池
     hikari:
@@ -90,7 +90,20 @@ spring:
       max-request-size: 1000MB #文件上传总数据大小
   cache:
     # 缓存类型 jcache、redis、none(不使用缓存)
-    type: jcache
+    type: ${CACHE_TYPE:jcache}
+  
+  # Redis配置
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1
+          max-idle: 8
+          min-idle: 0
 #内嵌服务器配置
 server:
   #服务端口
