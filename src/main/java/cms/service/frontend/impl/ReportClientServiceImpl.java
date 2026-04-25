@@ -458,10 +458,30 @@ public class ReportClientServiceImpl implements ReportClientService {
             List<ReportType> reportTypeList = reportTypeRepository.findAllReportType();
             if(reportTypeList != null && reportTypeList.size() >0){
                 for(Report report : qr.getResultlist()){
+                    // 处理单个举报类型
                     for(ReportType reportType : reportTypeList){
-                        if(report.getReportTypeId().equals(reportType.getId())){
+                        if(report.getReportTypeId() != null && report.getReportTypeId().equals(reportType.getId())){
                             report.setReportTypeName(reportType.getName());
                             break;
+                        }
+                    }
+                    
+                    // 处理多个举报类型（如果有）
+                    if(report.getReportTypeIds() != null && !report.getReportTypeIds().trim().isEmpty()){
+                        List<String> typeNames = new ArrayList<>();
+                        String[] typeIds = report.getReportTypeIds().split(",");
+                        for(String typeId : typeIds){
+                            if(typeId != null && !typeId.trim().isEmpty()){
+                                for(ReportType reportType : reportTypeList){
+                                    if(typeId.trim().equals(reportType.getId())){
+                                        typeNames.add(reportType.getName());
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if(typeNames.size() > 0){
+                            report.setReportTypeNames(String.join(",", typeNames));
                         }
                     }
                 }
