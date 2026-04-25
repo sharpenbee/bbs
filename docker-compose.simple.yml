@@ -1,0 +1,81 @@
+# 简化版docker-compose配置 - 使用更基础的镜像
+# 首先需要在本地执行 mvn clean package -DskipTests 构建jar包
+
+version: '3.8'
+
+services:
+  mysql:
+    # 使用mariadb作为替代，通常更容易拉取
+    image: mariadb:10.11
+    container_name: bbs-mysql
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: bbs-jdk21
+      MARIADB_CHARACTER_SET_SERVER: utf8mb4
+      MARIADB_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - bbs-network
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: bbs-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bbs-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      # 使用alpine基础镜像，手动安装JDK
+      dockerfile: Dockerfile.alpine
+    container_name: bbs-app
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=bbs-jdk21
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JAVA_OPTS=-Xms256m -Xmx512m
+    volumes:
+      - app_data:/app/bbs
+      - ./logs:/app/logs
+    networks:
+      - bbs-network
+
+volumes:
+  mysql_data:
+  redis_data:
+  app_data:
+
+networks:
+  bbs-network:
+    driver: bridge

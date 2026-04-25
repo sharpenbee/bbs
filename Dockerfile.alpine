@@ -1,4 +1,4 @@
-# 基于Alpine Linux，手动安装OpenJDK 21（不依赖Docker Hub的Java镜像）
+# 基于Alpine Linux，手动安装OpenJDK 21
 # 首先需要在本地执行 mvn clean package -DskipTests 构建jar包
 
 FROM alpine:3.20

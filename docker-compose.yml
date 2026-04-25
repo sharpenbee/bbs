@@ -5,6 +5,15 @@ version: '3.8'
 # 2. 使用备选Dockerfile（Dockerfile.alt）使用更常见的镜像
 # 3. 手动拉取镜像后再构建
 
+# Docker容器化配置
+# 使用说明：
+# 1. 首先在本地构建项目：mvn clean package -DskipTests
+# 2. 然后启动所有服务：docker-compose up -d
+#
+# 如果遇到镜像拉取问题：
+# - 可以尝试使用 docker-compose.simple.yml（使用MariaDB替代MySQL）
+# - 或者直接使用 start-local.bat 在本地运行（不依赖Docker）
+
 services:
   mysql:
     # 如果无法拉取mysql:8.0，可以尝试使用mariadb:10.11作为替代
@@ -26,7 +35,6 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./docker/mysql/init:/docker-entrypoint-initdb.d
     networks:
       - bbs-network
     healthcheck:
@@ -67,11 +75,13 @@ services:
       redis:
         condition: service_healthy
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/bbs-jdk21?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&zeroDateTimeBehavior=CONVERT_TO_NULL&allowPublicKeyRetrieval=true&useSSL=false&rewriteBatchedStatements=true
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=root
-      - SPRING_DATA_REDIS_HOST=redis
-      - SPRING_DATA_REDIS_PORT=6379
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=bbs-jdk21
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - JAVA_OPTS=-Xms256m -Xmx512m
     volumes:
       - app_data:/app/bbs
